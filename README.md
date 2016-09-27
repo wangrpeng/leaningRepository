@@ -1,2 +1,2 @@
 # leaningRepository
-这个Reposotory放一些自己的资料
+这个Repository放一些自己的资料
