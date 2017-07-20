@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+  "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+  "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+	<session-factory>
+		<!-- data source -->
+		<property name="connection.datasource">FBI-PROD</property>    
+        <!-- SQL dialect -->
+		<property name="hibernate.dialect">org.hibernate.dialect.OracleDialect</property>
+		
+		<property name="hibernate.default_schema">fbi</property> 
+		
+		<!-- Enable Hibernate's automatic session context management -->
+		<property name="hibernate.current_session_context_class">thread</property>
+		
+		<!-- Disable the second-level cache  -->
+        <property name="cache.provider_class">org.hibernate.cache.internal.NoCacheProvider</property>
+        
+        <!-- Show and print nice SQL on stdout -->
+		<property name="show_sql">true</property>
+		<property name="format_sql">true</property>
+
+        <!-- tested OK -->
+        <property name="hibernate.connection.release_mode">after_statement</property>
+        <property name="hibernate.transaction.factory_class">org.hibernate.transaction.JTATransactionFactory</property>
+        
+        <!-- Drop and re-create the database schema on startup -->
+		<!-- <property name="hibernate.hbm2ddl.auto">none</property> -->
+
+		<!-- List of XML mapping files -->
+		<mapping class="iis.bbs.model.EquipmentOrderInfo" />
+		<mapping class="iis.bbs.model.SvBBSInfo" />
+		<mapping class="iis.bbs.model.SvBDELInfo" />
+		<mapping class="iis.bbs.model.SvBDELNoterpadInfo" />
+		<mapping class="iis.bbs.model.BackDateCpe" />
+		
+	</session-factory>
+
+</hibernate-configuration>
