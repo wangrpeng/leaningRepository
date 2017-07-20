@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans >
+
+    <!-- ======================== FILTER CHAIN ======================= -->
+    <!--  if you wish to use channel security, add "channelProcessingFilter," in front
+         of "httpSessionContextIntegrationFilter" in the list below -->
+    <bean id="filterChainProxy"
+          class="org.acegisecurity.util.FilterChainProxy">
+        <property name="filterInvocationDefinitionSource">
+            <value><![CDATA[
+                CONVERT_URL_TO_LOWERCASE_BEFORE_COMPARISON
+                PATTERN_TYPE_APACHE_ANT
+                /**=httpSessionContextIntegrationFilter,logoutFilter,authenticationProcessingFilter,basicProcessingFilter,securityContextHolderAwareRequestFilter,anonymousProcessingFilter,exceptionTranslationFilter,filterInvocationInterceptor
+            ]]></value>
+            <!--httpSessionContextIntegrationFilter,-->
+        </property>
+    </bean>
+
+    <!--表单认证-->
+    <bean id="authenticationProcessingFilter"
+          class="org.acegisecurity.ui.webapp.AuthenticationProcessingFilter">
+        <property name="authenticationManager"
+                  ref="authenticationManager"/>
+        <property name="authenticationFailureUrl">
+            <value>/index.jsp?login_error=1</value>
+        </property>
+        <property name="defaultTargetUrl" value="/welcomeFile.action"/>
+        <property name="filterProcessesUrl"
+                  value="/j_acegi_security_check"/>	
+    </bean>
+
+    <bean id="authenticationManager"
+          class="org.acegisecurity.providers.ProviderManager">
+        <property name="providers">
+            <list>
+                <ref local="daoAuthenticationProvider"/>
+            </list>
+        </property>
+    </bean>
+    <bean id="passwordEncoder"
+   		class="org.acegisecurity.providers.encoding.Md5PasswordEncoder"/>
+   		
+    <bean id="daoAuthenticationProvider"
+          class="org.acegisecurity.providers.dao.DaoAuthenticationProvider">
+        <property name="userDetailsService" ref="jdbcDao"/>
+        <!--<property name="userDetailsService" ref="inMemDaoImpl"/>-->
+        <!--<property name="userCache" ref="userCache"/>-->
+        <property name="passwordEncoder" ref="passwordEncoder"/> 
+    </bean>
+
+    <!-- user info -->
+    <bean id="jdbcDao" class="org.acegisecurity.userdetails.jdbc.JdbcDaoImpl">
+<!-- 		<bean id="jdbcDao" class=" com.hthk.iisz.bbmacau.dao.impl.UserInfoDaoImpl"> -->
+        <property name="dataSource" ref="dataSource"/>
+        <property name="usersByUsernameQuery">
+            <value>
+                SELECT username, PASSWORD, DECODE (enabled, 'Y', 1, 'N', 0) enabled FROM userinfo WHERE username = ?
+            </value>
+        </property>
+        <property name="authoritiesByUsernameQuery">
+            <value>SELECT  username,user_role authority FROM userinfo WHERE username = ?</value>
+        </property>
+    </bean>
+    <!--<bean id="inMemDaoImpl" class="org.acegisecurity.userdetails.memory.InMemoryDaoImpl">-->
+         <!--<property name="userMap">-->
+           <!--<value>admin=password,ROLE_ADMIN</value>-->
+       <!--</property>-->
+    <!--</bean>-->
+
+    <!--<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"/>-->
+
+    <!--<bean id="userCacheBackend" class="org.springframework.cache.ehcache.EhCacheFactoryBean">-->
+        <!--<property name="cacheManager">-->
+            <!--<ref local="cacheManager"/>-->
+        <!--</property>-->
+        <!--<property name="cacheName">-->
+            <!--<value>userCache</value>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+    <!--<bean id="userCache" class="org.acegisecurity.providers.dao.cache.EhCacheBasedUserCache">-->
+        <!--<property name="cache">-->
+            <!--<ref local="userCacheBackend"/>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+    <bean id="logoutFilter" class="org.acegisecurity.ui.logout.LogoutFilter">
+       <constructor-arg value="/index.jsp"/> <!-- URL redirected to after logout -->
+       <constructor-arg>
+          <list>
+               <bean class="org.acegisecurity.ui.logout.SecurityContextLogoutHandler"/>
+          </list>
+       </constructor-arg>
+    </bean>
+    <!--
+         httpSessionContextIntegrationFilter　每次request前 HttpSessionContextIntegrationFilter从Session中获取Authentication对象，在request完后
+         又把Authentication对象保存到Session中供下次request使用,此filter必须其他Acegi filter前使用
+     -->
+    <bean id="httpSessionContextIntegrationFilter"
+          class="org.acegisecurity.context.HttpSessionContextIntegrationFilter"/>
+
+    <!--
+        用于处理HTTP头的认证信息，如从Spring远程协议(如Hessian和Burlap)或普通的浏览器如IE,Navigator的HTTP头中获取用户信息，
+        将他们转交给通过authenticationManager属性装配的认证管理器。如果认证成功，会将一个Authentication对象放到会话中，
+        否则，如果认证失败，会将控制转交给认证入口点(通过authenticationEntryPoint属性装配)
+    -->
+    <bean id="basicProcessingFilter" class="org.acegisecurity.ui.basicauth.BasicProcessingFilter">
+        <property name="authenticationManager">
+            <ref local="authenticationManager"/>
+        </property>
+        <property name="authenticationEntryPoint">
+            <ref local="basicProcessingFilterEntryPoint"/>
+        </property>
+    </bean>
+
+    <bean id="basicProcessingFilterEntryPoint" class="org.acegisecurity.ui.basicauth.BasicProcessingFilterEntryPoint">
+        <property name="realmName">
+            <value>Contacts Realm</value>
+        </property>
+    </bean>
+
+    <bean id="securityContextHolderAwareRequestFilter"
+          class="org.acegisecurity.wrapper.SecurityContextHolderAwareRequestFilter"/>
+    <!--
+
+             filterInvocationInterceptor在执行转向url前检查objectDefinitionSource中设定的用户权限信息
+
+             过程：
+
+             首先，objectDefinitionSource中定义了访问URL需要的属性信息(这里的属性信息仅仅是标志，告诉accessDecisionManager要用哪些voter来投票)
+
+             然后，authenticationManager掉用自己的provider来对用户的认证信息进行校验。
+
+             最后，有投票者根据用户持有认证和访问url需要的属性，调用自己的voter来投票，决定是否允许访问。
+
+         -->
+
+    <bean id="filterInvocationInterceptor"
+          class="org.acegisecurity.intercept.web.FilterSecurityInterceptor">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="accessDecisionManager" ref="httpRequestAccessDecisionManager"/>
+        <property name="objectDefinitionSource">
+            <value>
+                PATTERN_TYPE_APACHE_ANT
+                /index.jsp=ROLE_ANONYMOUS,ROLE_SHEN,ROLE_MACAU,ROLE_ADMIN	
+                /images/**=ROLE_ANONYMOUS,ROLE_SHEN,ROLE_MACAU,ROLE_ADMIN
+                /**=ROLE_SHEN,ROLE_MACAU,ROLE_ADMIN
+            </value>
+        </property>
+    </bean>
+
+    <bean id="anonymousProcessingFilter" class="org.acegisecurity.providers.anonymous.AnonymousProcessingFilter">
+        <property name="key" value="anonymous"/>
+        <property name="userAttribute" value="anonymousUser,ROLE_ANONYMOUS"/>
+    </bean>
+
+    <bean id="httpRequestAccessDecisionManager" class="org.acegisecurity.vote.AffirmativeBased">
+        <property name="decisionVoters">
+            <list>
+                <ref bean="roleVoter"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="roleVoter" class="org.acegisecurity.vote.RoleVoter"/>
+
+
+    <!-- 异常处理filter -->
+    <bean id="exceptionTranslationFilter"
+          class="org.acegisecurity.ui.ExceptionTranslationFilter">
+        <property name="authenticationEntryPoint">
+            <bean
+                    class="org.acegisecurity.ui.webapp.AuthenticationProcessingFilterEntryPoint">
+                <property name="loginFormUrl" value="/index.jsp"/>
+                <property name="forceHttps" value="false"/>
+            </bean>
+        </property>
+        <property name="accessDeniedHandler">
+            <bean
+                    class="org.acegisecurity.ui.AccessDeniedHandlerImpl">
+                <property name="errorPage" value="/index.jsp?login_error=1"/>
+            </bean>
+        </property>
+    </bean>
+
+</beans>
